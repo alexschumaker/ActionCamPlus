@@ -1,5 +1,6 @@
 local addonName, ACP = ...;
 local actionCamEngaged = false
+local focusEngaged = false
 local castingMount = false
 local selfUpdate = false
 local _
@@ -16,8 +17,8 @@ ActionCamPlus_EventFrame:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
 ActionCamPlus_EventFrame:RegisterEvent("PLAYER_MOUNT_DISPLAY_CHANGED")
 
 -- Focusing Events
-ActionCamPlus_EventFrame:RegisterEvent("PLAYER_ENTER_COMBAT")
-ActionCamPlus_EventFrame:RegisterEvent("PLAYER_LEAVE_COMBAT")
+ActionCamPlus_EventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
+ActionCamPlus_EventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 
 ActionCamPlus_EventFrame:SetScript("OnEvent", function(self,event,...) self[event](self,event,...);end)
 
@@ -28,7 +29,7 @@ ActionCamPlus_ZoomLevelUpdateFrame:SetScript("OnUpdate", function(self, elapsed)
 local camMoving = false
 local lastCamPosition = 0
 local timeSinceLastUpdate = 0
-function ACP.zoomLevelUpdate(self, elapsed)
+function ACP.zoomLevelUpdate(self, elapsed) -- Save where we like our camera to be while walking or mounted
 	timeSinceLastUpdate = timeSinceLastUpdate + elapsed
 	local camPosition = GetCameraZoom()
 	if timeSinceLastUpdate > .5 then
@@ -60,6 +61,7 @@ function ActionCamPlus_EventFrame:ADDON_LOADED(self, addon)
 		if not ActionCamPlusDB then -- Set defaults
 			ActionCamPlusDB = {
 				addonEnabled = true, 
+				focusEnabled = false,
 				mountedCamDistance = 30,
 				unmountedCamDistance = 20,
 				transitionSpeed = 12,
@@ -90,14 +92,14 @@ end
 function ActionCamPlus_EventFrame:UNIT_SPELLCAST_START(self, unit, counter, spellID)
 	if unit == "player" and ACP.SpellIsMount(spellID) then
 		castingMount = true
-		ACP.ActionCamOFF()
+		ACP.SetActionCam()
 	end
 end
 
 function ActionCamPlus_EventFrame:UNIT_SPELLCAST_INTERRUPTED(self, unit)
 	if unit == "player" and castingMount and not IsMounted() then 
-		ACP.ActionCamON()
 		castingMount = false
+		ACP.SetActionCam()
 	end
 end
 
@@ -106,16 +108,18 @@ function ActionCamPlus_EventFrame:PLAYER_MOUNT_DISPLAY_CHANGED()
 		castingMount = false
 	end
 
-	if IsMounted() or not ActionCamPlusDB.addonEnabled then 
-		ACP.ActionCamOFF()
-	else
-		ACP.ActionCamON()
-	end
+	ACP.SetActionCam()
 end
 
 
 -- Focusing Event Functions
-function ActionCamPlus_EventFrame:PLAYER_ENTER_COMBAT()
+function ActionCamPlus_EventFrame:PLAYER_REGEN_DISABLED()
+	ACP.SetActionCam()
+end
+
+function ActionCamPlus_EventFrame:PLAYER_REGEN_ENABLED()
+	ACP.SetActionCam()
+end
 
 -- set up slash commands
 SLASH_ACTIONCAMPLUS1 = "/actioncamplus"
@@ -133,7 +137,17 @@ function SlashCmdList.ACTIONCAMPLUS(msg)
 			ActionCamPlusDB.addonEnabled = true
 			print("ActionCamPlus enabled.")
 		end
-		ActionCamPlus_EventFrame:PLAYER_MOUNT_DISPLAY_CHANGED()
+		ACP.SetActionCam()
+
+	elseif arg1 == "focus" or arg1 == "f" then
+		if ActionCamPlusDB.focusEnabled then
+			ActionCamPlusDB.focusEnabled = false
+			print("Focusing disabled.")
+		else
+			ActionCamPlusDB.focusEnabled = true
+			print("Focusing enabled.")
+		end
+		ACP.SetActionCam()
 
 	elseif arg1 == "transitionspeed" or arg1 == "ts" then 
 		ActionCamPlusDB.transitionSpeed = tonumber(arg2)
@@ -152,10 +166,9 @@ function ACP.ToggleCVar(CVar)
 end
 
 function ACP.ActionCamON()
-	if not actionCamEngaged and ActionCamPlusDB.addonEnabled then
+	if not actionCamEngaged then
 		SetCVar("test_cameraDynamicPitch", 1)
 		SetCVar("test_cameraOverShoulder", 1)
-		-- if not camMoving then ActionCamPlusDB.mountedCamDistance = GetCameraZoom() end
 		ACP.SetCameraZoom(ActionCamPlusDB.unmountedCamDistance)
 		actionCamEngaged = true
 	end
@@ -165,22 +178,61 @@ function ACP.ActionCamOFF()
 	if actionCamEngaged then 
 		SetCVar("test_cameraDynamicPitch", 0)
 		SetCVar("test_cameraOverShoulder", 0)
-		-- if not cameraMoving then ActionCamPlusDB.unmountedCamDistance = GetCameraZoom() end
 		ACP.SetCameraZoom(ActionCamPlusDB.mountedCamDistance)
 		actionCamEngaged = false
 	end
 end
 
-function ACP.SetCameraZoom(destination)
-	selfUpdate = true
-	SetCVar("cameraZoomSpeed", ActionCamPlusDB.transitionSpeed)
-	selfUpdate = false
-	if destination >= GetCameraZoom() then 
-		CameraZoomOut(destination - GetCameraZoom())
-	else
-		CameraZoomIn(GetCameraZoom() - destination)
+function ACP.SetFocusON()
+	if not focusEngaged then 
+		SetCVar("test_cameraTargetFocusEnemyEnable", 1)
+		focusEngaged = true
 	end
-	--SetCVar("cameraZoomSpeed", speed)
+end
+
+function ACP.SetFocusOFF()
+	if focusEngaged then 
+		SetCVar("test_cameraTargetFocusEnemyEnable", 0)
+		focusEngaged = false
+	end
+end
+
+function ACP.SetCameraZoom(destination)
+	if ActionCamPlusDB.addonEnabled then
+		selfUpdate = true
+		SetCVar("cameraZoomSpeed", ActionCamPlusDB.transitionSpeed)
+		selfUpdate = false
+		if destination >= GetCameraZoom() then 
+			CameraZoomOut(destination - GetCameraZoom())
+		else
+			CameraZoomIn(GetCameraZoom() - destination)
+		end
+	end
+end
+
+function ACP.SetActionCam()
+	if ActionCamPlusDB.addonEnabled then
+		local mounted = IsMounted()
+		local combat = UnitAffectingCombat("player")
+		if castingMount then 
+			ACP.ActionCamOFF()
+			ACP.SetFocusOFF()
+
+		elseif mounted then 
+			ACP.ActionCamOFF()
+			ACP.SetFocusOFF()
+
+		elseif not castingMount and not mounted then
+			ACP.ActionCamON()
+			if combat and ActionCamPlusDB.focusEnabled then
+				ACP.SetFocusON()
+			else
+				ACP.SetFocusOFF()
+			end
+		end
+	else
+		ACP.ActionCamOFF()
+	end
 end
 
 -- Is spell id a mount?
