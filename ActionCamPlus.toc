@@ -1,0 +1,8 @@
+## Interface: 80000
+## Title: ActionCamPlus
+## Notes: Makes Blizzard's experimental Action Camera more usable.
+## Author: Anorian
+## SavedVariables: ActionCamPlusDB
+## Version: 0.1
+
+ActionCamPlus.lua
