@@ -1,17 +1,23 @@
 local addonName, ACP = ...;
 local actionCamEngaged = false
 local castingMount = false
-local defaultZoomSpeed = 50
+local selfUpdate = false
 local _
 
 local ActionCamPlus_EventFrame = CreateFrame("Frame")
+-- Init Events
 ActionCamPlus_EventFrame:RegisterEvent("ADDON_LOADED")
 ActionCamPlus_EventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+ActionCamPlus_EventFrame:RegisterEvent("CVAR_UPDATE")
 
 -- Mount Events
 ActionCamPlus_EventFrame:RegisterEvent("UNIT_SPELLCAST_START")
 ActionCamPlus_EventFrame:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
 ActionCamPlus_EventFrame:RegisterEvent("PLAYER_MOUNT_DISPLAY_CHANGED")
+
+-- Focusing Events
+ActionCamPlus_EventFrame:RegisterEvent("PLAYER_ENTER_COMBAT")
+ActionCamPlus_EventFrame:RegisterEvent("PLAYER_LEAVE_COMBAT")
 
 ActionCamPlus_EventFrame:SetScript("OnEvent", function(self,event,...) self[event](self,event,...);end)
 
@@ -30,11 +36,15 @@ function ACP.zoomLevelUpdate(self, elapsed)
 		if camMoving then
 			if camPosition == lastCamPosition and not castingMount then
 				camMoving = false
+				selfUpdate = true
 				SetCVar("cameraZoomSpeed", defaultZoomSpeed)
-				if IsMounted() then 
-					ActionCamPlusDB.mountedCamDistance = GetCameraZoom()
-				else
-					ActionCamPlusDB.unmountedCamDistance = GetCameraZoom()
+				selfUpdate = false
+				if ActionCamPlusDB.addonEnabled then
+					if IsMounted() then 
+						ActionCamPlusDB.mountedCamDistance = GetCameraZoom()
+					else
+						ActionCamPlusDB.unmountedCamDistance = GetCameraZoom()
+					end
 				end
 			end
 		elseif camPosition ~= lastCamPosition then
@@ -50,15 +60,14 @@ function ActionCamPlus_EventFrame:ADDON_LOADED(self, addon)
 		if not ActionCamPlusDB then -- Set defaults
 			ActionCamPlusDB = {
 				addonEnabled = true, 
-				mountedCamDistance = 15,
-				unmountedCamDistance = 15,
-				transitionSpeed = 15
+				mountedCamDistance = 30,
+				unmountedCamDistance = 20,
+				transitionSpeed = 12,
+				defaultZoomSpeed = 50
 			}
 		end
 
-		if ActionCamPlusDB.addonEnabled then 
-			UIParent:UnregisterEvent("EXPERIMENTAL_CVAR_CONFIRMATION_NEEDED")
-		end
+		UIParent:UnregisterEvent("EXPERIMENTAL_CVAR_CONFIRMATION_NEEDED")
 	end
 end
 
@@ -68,6 +77,12 @@ function ActionCamPlus_EventFrame:PLAYER_ENTERING_WORLD()
 		ActionCamPlus_EventFrame:PLAYER_MOUNT_DISPLAY_CHANGED()
 	else
 		ACP.ActionCamOFF()
+	end
+end
+
+function ActionCamPlus_EventFrame:CVAR_UPDATE(self, CVar, value)
+	if CVar == "cameraZoomSpeed" and not selfUpdate then
+		ActionCamPlusDB.defaultZoomSpeed = value
 	end
 end
 
@@ -91,12 +106,16 @@ function ActionCamPlus_EventFrame:PLAYER_MOUNT_DISPLAY_CHANGED()
 		castingMount = false
 	end
 
-	if IsMounted() then 
+	if IsMounted() or not ActionCamPlusDB.addonEnabled then 
 		ACP.ActionCamOFF()
 	else
 		ACP.ActionCamON()
 	end
 end
+
+
+-- Focusing Event Functions
+function ActionCamPlus_EventFrame:PLAYER_ENTER_COMBAT()
 
 -- set up slash commands
 SLASH_ACTIONCAMPLUS1 = "/actioncamplus"
@@ -104,12 +123,23 @@ SLASH_ACTIONCAMPLUS2 = "/acp"
 
 function SlashCmdList.ACTIONCAMPLUS(msg)
 	msg = string.lower(msg)
-	if msg == "" then
+	arg1, arg2 = strsplit(" ", msg, 2)
+
+	if arg1 == "" then
 		if ActionCamPlusDB.addonEnabled then
 			ActionCamPlusDB.addonEnabled = false
+			print("ActionCamPlus disabled.")
 		else
 			ActionCamPlusDB.addonEnabled = true
+			print("ActionCamPlus enabled.")
 		end
+		ActionCamPlus_EventFrame:PLAYER_MOUNT_DISPLAY_CHANGED()
+
+	elseif arg1 == "transitionspeed" or arg1 == "ts" then 
+		ActionCamPlusDB.transitionSpeed = tonumber(arg2)
+
+	elseif arg1 == "zoomspeed" or arg1 == "zs" then
+		SetCVar("cameraZoomSpeed", tonumber(arg2))
 	end
 end
 
@@ -142,7 +172,9 @@ function ACP.ActionCamOFF()
 end
 
 function ACP.SetCameraZoom(destination)
+	selfUpdate = true
 	SetCVar("cameraZoomSpeed", ActionCamPlusDB.transitionSpeed)
+	selfUpdate = false
 	if destination >= GetCameraZoom() then 
 		CameraZoomOut(destination - GetCameraZoom())
 	else
