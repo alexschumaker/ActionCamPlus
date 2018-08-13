@@ -1,10 +1,11 @@
 local addonName, ACP = ...;
-local version = 0.15
+local version = 0.16
 local actionCamEngaged = false
 local focusEngaged = false
 local castingMount = false
 local activeMountID = 0
 local ignoreCVarUpdate = false
+local druidMount = false
 local _
 
 local ActionCamPlus_EventFrame = CreateFrame("Frame")
@@ -17,6 +18,9 @@ ActionCamPlus_EventFrame:RegisterEvent("CVAR_UPDATE")
 ActionCamPlus_EventFrame:RegisterEvent("UNIT_SPELLCAST_START")
 ActionCamPlus_EventFrame:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
 ActionCamPlus_EventFrame:RegisterEvent("PLAYER_MOUNT_DISPLAY_CHANGED")
+if select(2, UnitClass("player")) == "DRUID" then
+	ActionCamPlus_EventFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORM") -- for Druid forms
+end
 
 -- Focusing Events
 ActionCamPlus_EventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
@@ -44,7 +48,7 @@ function ACP.zoomLevelUpdate(self, elapsed) -- Save where we like our camera to 
 				ignoreCVarUpdate = false
 				if ActionCamPlusDB.addonEnabled then
 					local zoomAmount = GetCameraZoom()
-					if IsMounted() then 
+					if IsMounted() or druidMount then 
 						if ActionCamPlusDB.mountSpecificZoom then 
 							ActionCamPlusDB.mountZooms[activeMountID] = zoomAmount
 						end
@@ -74,6 +78,7 @@ function ActionCamPlus_EventFrame:ADDON_LOADED(self, addon)
 			transitionSpeed = 12,
 			defaultZoomSpeed = 50,
 			mountSpecificZoom = false,
+			druidFormMounts = true,
 			mountZooms = {}
 		}
 
@@ -98,6 +103,7 @@ function ActionCamPlus_EventFrame:PLAYER_ENTERING_WORLD()
 	ActionCamPlusDB.defaultZoomSpeed = GetCVar("cameraZoomSpeed")
 	if ActionCamPlusDB.addonEnabled then 
 		ActionCamPlus_EventFrame:PLAYER_MOUNT_DISPLAY_CHANGED()
+		ActionCamPlus_EventFrame:UPDATE_SHAPESHIFT_FORM()
 	else
 		ACP.ActionCamOFF()
 	end
@@ -133,6 +139,18 @@ function ActionCamPlus_EventFrame:PLAYER_MOUNT_DISPLAY_CHANGED()
 	ACP.SetActionCam()
 end
 
+
+function ActionCamPlus_EventFrame:UPDATE_SHAPESHIFT_FORM() -- druid form check
+	local currentForm = GetShapeshiftFormID()
+	local mountForms = {4, 29, 27, 3}
+	if ActionCamPlusDB.druidFormMounts and currentForm and tContains(mountForms, currentForm) then
+		druidMount = true
+		activeMountID = currentForm
+	else
+		druidMount = false
+	end
+	ACP.SetActionCam()
+end
 
 -- Focusing Event Functions
 function ActionCamPlus_EventFrame:PLAYER_REGEN_DISABLED()
@@ -179,7 +197,17 @@ function SlashCmdList.ACTIONCAMPLUS(msg)
 			ActionCamPlusDB.mountSpecificZoom = true
 			print("Mount-specific Zoom levels enabled.")
 		end
-		actionCamEngaged = true
+		-- actionCamEngaged = true
+		ACP.SetActionCam()
+
+	elseif arg1 == "druidmount" or arg1 == "dm" then 
+		if ActionCamPlusDB.druidFormMounts then
+			ActionCamPlusDB.druidFormMounts = false
+			print("Druid Forms no longer treated as mounts.")
+		else
+			ActionCamPlusDB.druidFormMounts = true
+			print("Druid Forms are now treated as mounts.")
+		end
 		ACP.SetActionCam()
 
 	elseif arg1 == "transitionspeed" or arg1 == "ts" then 
@@ -264,7 +292,7 @@ function ACP.SetActionCam() -- This function basically decides everything
 			ACP.ActionCamOFF()
 			ACP.SetFocusOFF()
 
-		elseif mounted then 
+		elseif mounted or druidMount then 
 			ACP.ActionCamOFF()
 			ACP.SetFocusOFF()
 
@@ -292,3 +320,13 @@ function ACP.SpellIsMount(spellID)
 	end
 	return false
 end
+
+-- function ACP.IsMounted():
+-- 	if ActionCamPlusDB.druidFormMounts then
+-- 		if IsMounted() or druidMounted then 
+-- 			return true
+-- 		end
+-- 	else
+-- 		return IsMounted()
+-- 	end 
+-- end
