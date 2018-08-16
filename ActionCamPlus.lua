@@ -1,5 +1,5 @@
 local addonName, ACP = ...;
-local version = 0.16
+local version = 0.17
 local actionCamEngaged = false
 local focusEngaged = false
 local castingMount = false
@@ -82,7 +82,10 @@ function ActionCamPlus_EventFrame:ADDON_LOADED(self, addon)
 			mountZooms = {}
 		}
 
-		if not ActionCamPlusDB or not ActionCamPlusDB.lastVersion or ActionCamPlusDB.lastVersion ~= version then 
+		if not ActionCamPlusDB then
+			ActionCamPlusDB = defaults
+
+		elseif not ActionCamPlusDB.lastVersion or ActionCamPlusDB.lastVersion ~= version then 
 			ACP.UpdateDB(defaults)
 		end
 
