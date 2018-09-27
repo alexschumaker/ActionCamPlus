@@ -1,0 +1,5 @@
+<Bindings>
+	<Binding name="Toggle ActionCamPlus" header="ACTIONCAMPLUS">
+		SlashCmdList.ACTIONCAMPLUS('')
+	</Binding>
+</Bindings>

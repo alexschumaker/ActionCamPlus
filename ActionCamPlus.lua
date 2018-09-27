@@ -6,6 +6,7 @@ local castingMount = false
 local activeMountID = 0
 local ignoreCVarUpdate = false
 local druidMount = false
+BINDING_HEADER_ACTIONCAMPLUS = "ActionCamPlus" 
 local _
 
 local ActionCamPlus_EventFrame = CreateFrame("Frame")
@@ -222,7 +223,7 @@ function SlashCmdList.ACTIONCAMPLUS(msg)
 
 	elseif arg1 == "t" or arg1 == "test" then 
 		--TEST CODE
-
+		SetCVar("test_cameraDynamicPitchSmartPivotCutoffDist", arg2)
 		--END TEST CODE
 	end
 end
