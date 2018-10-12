@@ -5,4 +5,6 @@
 ## SavedVariables: ActionCamPlusDB
 ## Version: 0.1
 
+ActionCamPlusOptions.xml
 ActionCamPlus.lua
+ActionCamPlusConfig.lua
