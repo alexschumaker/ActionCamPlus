@@ -84,6 +84,7 @@ end
 
 function ActionCamPlus_EventFrame:PLAYER_ENTERING_WORLD()
 	ActionCamPlusDB.defaultZoomSpeed = GetCVar("cameraZoomSpeed")
+	ActionCamPlus_EventFrame:UPDATE_SHAPESHIFT_FORM()
 	ACP.SetActionCam()
 
 	-- if ActionCamPlusDB.ACP_AddonEnabled then 
@@ -124,17 +125,26 @@ function ActionCamPlus_EventFrame:PLAYER_MOUNT_DISPLAY_CHANGED()
 	ACP.SetActionCam()
 end
 
-
+local druidTimer = false
 function ActionCamPlus_EventFrame:UPDATE_SHAPESHIFT_FORM() -- druid form check
+	if not druidTimer then
+		druidTimer = true
+		C_Timer.After(.1, function() ACP.CheckDruidForm() end)
+	end
+end
+
+function ACP.CheckDruidForm()
 	local currentForm = GetShapeshiftFormID()
+	print(currentForm)
 	local mountForms = {4, 29, 27, 3}
-	if ActionCamPlusDB.druidFormMounts and currentForm and tContains(mountForms, currentForm) then
+	if ActionCamPlusDB.ACP_DruidFormMounts and currentForm and tContains(mountForms, currentForm) then
 		druidMount = true
 		activeMountID = currentForm
 	else
 		druidMount = false
 	end
 	ACP.SetActionCam()
+	druidTimer = false
 end
 
 -- Combat Event Functions
