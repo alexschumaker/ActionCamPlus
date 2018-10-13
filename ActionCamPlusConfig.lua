@@ -9,7 +9,7 @@ local leftMargin = 15
 local listIndent = 34
 local listItemHeight = -20
 local listVertPad = 6
-local sectionVertPad = -30
+local sectionVertPad = 0
 
 -- Draw all the option elements when the options frame loads
 function ActionCamPlusConfig_Setup()
@@ -33,12 +33,14 @@ function ActionCamPlusConfig_Setup()
 		ACP_AddonEnabled = true,
 		ACP_ActionCam = true,
 		ACP_Focusing = false,
+		ACP_Pitch = true,
 		ACP_SetCameraZoom = true,
 		unmountedCamDistance = 20,
 
 		ACP_Mounted = true,
 		ACP_MountedActionCam = false,
 		ACP_MountedFocusing = false,
+		ACP_MountedPitch = false,
 		ACP_DruidFormMounts = true,
 		ACP_MountedSetCameraZoom = true,
 		ACP_MountSpecificZoom = false,
@@ -47,6 +49,7 @@ function ActionCamPlusConfig_Setup()
 		ACP_Combat = false,
 		ACP_CombatActionCam = true,
 		ACP_CombatFocusing = true,
+		ACP_CombatPitch = true,
 		ACP_CombatSetCameraZoom = false,
 		combatCamDistance = 20,
 		
@@ -55,7 +58,7 @@ function ActionCamPlusConfig_Setup()
 		
 		mountZooms = {}
 	}
-
+	
 	if not ActionCamPlusDB then
 		ActionCamPlusDB = defaults
 
@@ -81,16 +84,20 @@ function ActionCamPlusConfig_Setup()
 									"Focusing",
 									"Target Focusing enabled while on foot.")
 
+				-- Pitch
+				options.ACP_Pitch = ACP.createCheckButton("Pitch", ACP_AddonEnabled, ACP_Focusing, 0,  listVertPad,
+									"Pitch",
+									"Camera pitch enabled while on foot.")
+
 				-- Set Camera Zoom
-				options.ACP_SetCameraZoom = ACP.createCheckButton("SetCameraZoom", ACP_AddonEnabled, ACP_Focusing, 0,  listVertPad,
+				options.ACP_SetCameraZoom = ACP.createCheckButton("SetCameraZoom", ACP_AddonEnabled, ACP_Pitch, 0,  listVertPad,
 									"Set Camera Zoom",
 									"ActionCamPlus will reset your camera zoom distance to where it was before you mounted or entered combat.")
 
 	-- Mounted Header
-	options.ACP_Mounted = ACP.createCheckButton("Mounted", ACP_AddonEnabled, ActionCamPlusOptionsFrame, leftMargin,  -120,
+	options.ACP_Mounted = ACP.createCheckButton("Mounted", ACP_AddonEnabled, ACP_SetCameraZoom, -listIndent,  sectionVertPad,
 						"Mounted",
-						"Enables ActionCamPlus behavior while mounted.",
-						"TOPLEFT", "TOPLEFT")
+						"Enables ActionCamPlus behavior while mounted.")
 	-- Mounted Options
 				-- Action Cam
 				options.ACP_MountedActionCam = ACP.createCheckButton("MountedActionCam", ACP_Mounted, ACP_Mounted, listIndent,  5,
@@ -102,8 +109,13 @@ function ActionCamPlusConfig_Setup()
 									"Focusing",
 									"Target Focusing enabled while mounted.")
 
+				-- Pitch
+				options.ACP_MountedPitch = ACP.createCheckButton("MountedPitch", ACP_Mounted, ACP_MountedFocusing, 0,  listVertPad,
+									"Pitch",
+									"Camera pitch enabled while mounted.")
+
 				-- Druid Form Mounts
-				options.ACP_DruidFormMounts = ACP.createCheckButton("DruidFormMounts", ACP_Mounted, ACP_MountedFocusing, 0,  listVertPad,
+				options.ACP_DruidFormMounts = ACP.createCheckButton("DruidFormMounts", ACP_Mounted, ACP_MountedPitch, 0,  listVertPad,
 									"Druid Form Mounts",
 									"Druids' travel forms will be treated as mounts.")
 
@@ -118,10 +130,9 @@ function ActionCamPlusConfig_Setup()
 									"ActionCamPlus will remember a zoom level for each mount.")
 
 	-- Combat Header
-	options.ACP_Combat = ACP.createCheckButton("Combat", ACP_AddonEnabled, ActionCamPlusOptionsFrame, leftMargin,  -248,
+	options.ACP_Combat = ACP.createCheckButton("Combat", ACP_AddonEnabled, ACP_MountSpecificZoom, -listIndent, sectionVertPad,
 						"Combat",
-						"Enables ActionCamPlus behavior while in combat.",
-						"TOPLEFT", "TOPLEFT")
+						"Enables ActionCamPlus behavior while in combat.")
 	-- Combat Options
 				-- Action Cam
 				options.ACP_CombatActionCam = ACP.createCheckButton("CombatActionCam", ACP_Combat, ACP_Combat, listIndent,  5,
@@ -133,8 +144,13 @@ function ActionCamPlusConfig_Setup()
 									"Focusing",
 									"Target Focusing enabled while in combat.")
 
+				-- Pitch
+				options.ACP_CombatPitch = ACP.createCheckButton("CombatPitch", ACP_Combat, ACP_CombatFocusing, 0,  listVertPad,
+									"Pitch",
+									"Camera pitch enabled while in combat.")
+
 				-- Set Camera Zoom
-				options.ACP_CombatSetCameraZoom = ACP.createCheckButton("CombatSetCameraZoom", ACP_Combat, ACP_CombatFocusing, 0,  listVertPad,
+				options.ACP_CombatSetCameraZoom = ACP.createCheckButton("CombatSetCameraZoom", ACP_Combat, ACP_CombatPitch, 0,  listVertPad,
 									"Set Camera Zoom",
 									"When you enter combat, ActionCamPlus will set the camera distance to what it was last time you were in combat.")
 
@@ -142,43 +158,12 @@ end
 
 function ACP.UpdateDB(defaults)
 	for k,v in pairs(defaults) do
-		if not ActionCamPlusDB[k] or ActionCamPlusDB[k] == nil then 
+		-- print(k, ActionCamPlusDB[k], v)
+		if not ActionCamPlusDB[k] then 
 			ActionCamPlusDB[k] = v
 		end
 	end
-	ActionCamPlusDB.lastVersion = version
-end
-
-function ACP.SetDependencies()
-	for _, option in pairs(options) do
-		-- ACP.UpdateDependencies(option)
-
-
-		-- if option.deps then
-		-- 	local enable = true
-		-- 	for _, depset in pairs(option.deps) do
-
-		-- 		local enableInner = false
-		-- 		for _, dep in pairs(depset) do
-		-- 			if getglobal(dep):GetChecked() and getglobal(dep):IsEnabled() then
-		-- 				enableInner = true
-		-- 				break
-		-- 			end
-		-- 		end
-
-		-- 		if not enableInner then	
-		-- 			enable = false
-		-- 			break
-		-- 		end
-		-- 	end
-			
-		-- 	if enable then
-		-- 		option:ACPEnable()
-		-- 	else
-		-- 		option:ACPDisable()
-		-- 	end
-		-- end
-	end
+	ActionCamPlusDB.lastVersion = ACP.version
 end
 
 function ACP.UpdateDependencies(option)
@@ -218,6 +203,8 @@ function ACP.createCheckButton(name, parent, anchor, offX, offY, label, tooltip,
 	checkButton:SetScript("OnClick", ActionCamPlusConfig_OnClick)
 	checkButton:SetScript("OnShow", ActionCamPlusConfig_OnShow)
 
+	checkButton:GetCheckedTexture():Show()
+	checkButton:GetCheckedTexture():Hide()
 	checkButton:SetChecked(true)
 	checkButton.SoftDisableCheckedTexture = checkButton:CreateTexture("SoftDisableCheckedTexture", "OVERLAY", 7)
 	checkButton.SoftDisableCheckedTexture:SetTexture(checkButton:GetDisabledCheckedTexture():GetTexture())
