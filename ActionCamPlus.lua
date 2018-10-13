@@ -135,7 +135,6 @@ end
 
 function ACP.CheckDruidForm()
 	local currentForm = GetShapeshiftFormID()
-	print(currentForm)
 	local mountForms = {4, 29, 27, 3}
 	if ActionCamPlusDB.ACP_DruidFormMounts and currentForm and tContains(mountForms, currentForm) then
 		druidMount = true
