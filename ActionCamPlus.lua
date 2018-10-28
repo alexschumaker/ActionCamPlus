@@ -50,14 +50,14 @@ function ACP.zoomLevelUpdate(self, elapsed) -- Save where we like our camera to 
 
 				if ActionCamPlusDB.ACP_AddonEnabled then
 					local zoomAmount = GetCameraZoom()
-					if IsMounted() or druidMount then 
+					if (ActionCamPlusDB.ACP_Mounted and IsMounted()) or (ActionCamPlusDB.ACP_DruidFormMounts and druidMount) then 
 						if ActionCamPlusDB.ACP_MountSpecificZoom then 
 							ActionCamPlusDB.mountZooms[activeMountID] = zoomAmount
 						end
 
 						ActionCamPlusDB.mountedCamDistance = zoomAmount
 
-					elseif UnitAffectingCombat("player") then
+					elseif ActionCamPlusDB.ACP_Combat and UnitAffectingCombat("player") then
 						ActionCamPlusDB.combatCamDistance = zoomAmount
 
 					else
@@ -75,7 +75,14 @@ end
 --init
 function ActionCamPlus_EventFrame:ADDON_LOADED(self, addon)
 	if addon == addonName then
-		
+		-- set up slash commands and see if Addon Control Panel is being used.
+		SLASH_ACTIONCAMPLUS1 = "/actioncamplus"
+		if not ACP_Data then 
+			SLASH_ACTIONCAMPLUS2 = "/acp"
+		else
+			SLASH_ACTIONCAMPLUS2 = "/acpl"
+		end
+
 		ActionCamPlusConfig_Setup()
 		UIParent:UnregisterEvent("EXPERIMENTAL_CVAR_CONFIRMATION_NEEDED")
 		print("ActionCamPlus Loaded. /acp config")
@@ -155,10 +162,8 @@ function ActionCamPlus_EventFrame:PLAYER_REGEN_ENABLED()
 	ACP.SetActionCam()
 end
 
--- set up slash commands
-SLASH_ACTIONCAMPLUS1 = "/actioncamplus"
-SLASH_ACTIONCAMPLUS2 = "/acp"
 
+-- Slash command handler function (init happens on addon_loaded)
 function SlashCmdList.ACTIONCAMPLUS(msg)
 	msg = string.lower(msg)
 	arg1, arg2 = strsplit(" ", msg, 2)
@@ -233,6 +238,7 @@ function ACP.SetActionCam() -- This function basically decides everything
 	else
 		ACP.ActionCam(false)
 		ACP.SetFocus(false)
+		ACP.SetPitch(false)
 	end
 end
 

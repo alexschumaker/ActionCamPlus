@@ -166,6 +166,7 @@ function ACP.UpdateDB(defaults)
 	ActionCamPlusDB.lastVersion = ACP.version
 end
 
+-- recursive function to grey out options that aren't doing anything
 function ACP.UpdateDependencies(option)
 	local children = {option:GetChildren()}
 

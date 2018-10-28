@@ -3,7 +3,8 @@
 ## Notes: Makes Blizzard's experimental Action Camera more usable.
 ## Author: Anorian
 ## SavedVariables: ActionCamPlusDB
-## Version: 0.1
+## Version: 0.21
+## OptionalDeps: ACP
 
 ActionCamPlusOptions.xml
 ActionCamPlus.lua
