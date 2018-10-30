@@ -166,7 +166,7 @@ function ACP.UpdateDB(defaults)
 	ActionCamPlusDB.lastVersion = ACP.version
 end
 
--- recursive function to grey out options that aren't doing anything
+-- recursive function to grey-out options that aren't doing anything
 function ACP.UpdateDependencies(option)
 	local children = {option:GetChildren()}
 
@@ -228,8 +228,11 @@ function ActionCamPlusConfig_OnClick(self, mousebutton, down)
 
 	if self:GetChecked() and self:IsSoftDisabled() then
 		self.SoftDisableCheckedTexture:Show()
+		self:GetCheckedTexture():Hide()
+
 	else
 		self.SoftDisableCheckedTexture:Hide()
+		
 	end
 
 	ACP.SetActionCam()
@@ -247,7 +250,7 @@ function ACP.SoftToggle(button, enable)
 	if enable then
 		button.SoftDisableCheckedTexture:Hide()
 		text:SetFontObject("GameFontNormal")
-		button.SoftDisabled = false
+		button.SoftDisabled = false	
 	else
 		if button:GetChecked() then
 			button.SoftDisableCheckedTexture:Show()
