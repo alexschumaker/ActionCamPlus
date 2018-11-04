@@ -79,13 +79,14 @@ function ActionCamPlus_EventFrame:ADDON_LOADED(self, addon)
 		SLASH_ACTIONCAMPLUS1 = "/actioncamplus"
 		if not ACP_Data then 
 			SLASH_ACTIONCAMPLUS2 = "/acp"
+			SLASH_ACTIONCAMPLUS3 = "/acpl"
 		else
 			SLASH_ACTIONCAMPLUS2 = "/acpl"
 		end
 
 		ActionCamPlusConfig_Setup()
 		UIParent:UnregisterEvent("EXPERIMENTAL_CVAR_CONFIRMATION_NEEDED")
-		print("ActionCamPlus Loaded. /acp config")
+		print("ActionCamPlus Loaded. /acpl config")
 	end
 end
 

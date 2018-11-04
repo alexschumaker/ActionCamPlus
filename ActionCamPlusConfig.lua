@@ -174,6 +174,7 @@ function ACP.UpdateDependencies(option)
 		for _,child in pairs(children) do
 			if not option:GetChecked() or option:IsSoftDisabled() then
 				child:SoftDisable()
+			
 			else
 				child:SoftEnable()
 			end
@@ -228,7 +229,6 @@ function ActionCamPlusConfig_OnClick(self, mousebutton, down)
 
 	if self:GetChecked() and self:IsSoftDisabled() then
 		self.SoftDisableCheckedTexture:Show()
-		self:GetCheckedTexture():Hide()
 
 	else
 		self.SoftDisableCheckedTexture:Hide()
@@ -254,6 +254,7 @@ function ACP.SoftToggle(button, enable)
 	else
 		if button:GetChecked() then
 			button.SoftDisableCheckedTexture:Show()
+
 		end
 		text:SetFontObject("GameFontDisable")
 		button.SoftDisabled = true
