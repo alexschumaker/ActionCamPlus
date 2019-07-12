@@ -38,7 +38,7 @@ local timeSinceLastUpdate = 0
 function ACP.zoomLevelUpdate(self, elapsed) -- Save where we like our camera to be while walking, mounted, or in combat
 	timeSinceLastUpdate = timeSinceLastUpdate + elapsed
 	local camPosition = GetCameraZoom()
-	if timeSinceLastUpdate > .25 then
+	if (timeSinceLastUpdate > .25) then
 		timeSinceLastUpdate = 0
 		if camMoving then
 			if camPosition == lastCamPosition and not castingMount then
@@ -105,7 +105,7 @@ end
 
 function ActionCamPlus_EventFrame:CVAR_UPDATE(self, CVar, value)
 	if CVar == "cameraZoomSpeed" and not ignoreCVarUpdate then
-		ActionCamPlusDB.defaultZoomSpeed = value
+		-- ActionCamPlusDB.defaultZoomSpeed = value
 	end
 end
 
