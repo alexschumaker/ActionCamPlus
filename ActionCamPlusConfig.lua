@@ -58,6 +58,19 @@ function ActionCamPlusConfig_Setup()
 		
 		mountZooms = {}
 	}
+
+	local backdropInfo =
+		{
+			bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+			edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+			tile = true,
+			tileEdge = true,
+			tileSize = 32,
+			edgeSize = 32,
+			insets = { left = 11, right = 12, top = 12, bottom = 11 },
+		}
+
+	ActionCamPlusOptionsFrame:SetBackdrop(backdropInfo)
 	
 	if not ActionCamPlusDB then
 		ActionCamPlusDB = defaults
@@ -200,7 +213,7 @@ function ACP.createCheckButton(name, parent, anchor, offX, offY, label, tooltip,
 	framepoint = framepoint or "TOPLEFT"
 	anchorpoint = anchorpoint or "BOTTOMLEFT"
 
-	local checkButton = CreateFrame("CheckButton", "ACP_"..name, parent, "OptionsCheckButtonTemplate")
+	local checkButton = CreateFrame("CheckButton", "ACP_"..name, parent, "UICheckButtonTemplate")
 	checkButton:SetPoint(framepoint, anchor, anchorpoint, offX, offY)
 	checkButton:SetScript("OnClick", ActionCamPlusConfig_OnClick)
 	checkButton:SetScript("OnShow", ActionCamPlusConfig_OnShow)
@@ -208,7 +221,7 @@ function ACP.createCheckButton(name, parent, anchor, offX, offY, label, tooltip,
 	checkButton:GetCheckedTexture():Show()
 	checkButton:GetCheckedTexture():Hide()
 	checkButton:SetChecked(true)
-	checkButton.SoftDisableCheckedTexture = checkButton:CreateTexture("SoftDisableCheckedTexture", "OVERLAY", 7)
+	checkButton.SoftDisableCheckedTexture = checkButton:CreateTexture("SoftDisableCheckedTexture", "OVERLAY")
 	checkButton.SoftDisableCheckedTexture:SetTexture(checkButton:GetDisabledCheckedTexture():GetTexture())
 	checkButton.SoftDisableCheckedTexture:SetAllPoints(checkButton)
 	checkButton.SoftDisableCheckedTexture:Hide()

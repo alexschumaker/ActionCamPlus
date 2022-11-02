@@ -1,5 +1,5 @@
 <Ui>
-	<Frame name="ActionCamPlusOptionsFrame" 
+	<Frame inherits="BackdropTemplate" name="ActionCamPlusOptionsFrame" 
 	toplevel="true" parent="UIParent" frameStrata="HIGH" 
 	hidden="true" enableMouse="true" movable="true">
 		<Scripts>
@@ -12,17 +12,17 @@
 			<OnDragStop>self:StopMovingOrSizing();</OnDragStop>
 		</Scripts>
 
-		<Size><AbsDimension x="260" y="440"/></Size>
+		<Size><AbsDimension x="260" y="540"/></Size>
 		<Anchors><Anchor point="CENTER" relativeTo="UIParent"/></Anchors>
 
-		<Backdrop bgFile="Interface\DialogFrame\UI-DialogBox-Background" 
+<!-- 		<Frame inherits="BackdropTemplate" bgFile="Interface\DialogFrame\UI-DialogBox-Background" 
 			edgeFile="Interface\DialogFrame\UI-DialogBox-Border" tile="true">
 			<BackgroundInsets>
 				<AbsInset left="11" right="12" top="12" bottom="11"/>
 			</BackgroundInsets>
 			<TileSize><AbsValue val="32"/></TileSize>
 			<EdgeSize><AbsValue val="32"/></EdgeSize>
-		</Backdrop>
+		</Frame> -->
 
 		<!-- Title -->
 		<Layers>
@@ -51,10 +51,11 @@
 		<!-- Frames -->
 		<Frames>
 			<!-- Close Button -->
-			<Button name="$parentButtonClose" inherits="OptionsButtonTemplate" text="Close">
+			<Button name="$parentButtonClose" inherits="UIPanelButtonTemplate" text="Close">
+				<Size><AbsDimension x="80" y="20"/></Size>
 				<Anchors>
 					<Anchor point="BOTTOM">
-						<Offset><AbsDimension x="0" y="15"/></Offset>
+						<Offset><AbsDimension x="0" y="20"/></Offset>
 					</Anchor>
 				</Anchors>
 				<Scripts>
