@@ -86,7 +86,6 @@ function ActionCamPlus_EventFrame:ADDON_LOADED(self, addon)
 
 		ActionCamPlusConfig_Setup()
 		UIParent:UnregisterEvent("EXPERIMENTAL_CVAR_CONFIRMATION_NEEDED")
-		print("ActionCamPlus Loaded. /acpl config")
 	end
 end
 
