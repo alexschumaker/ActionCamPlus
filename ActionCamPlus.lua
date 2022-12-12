@@ -5,6 +5,8 @@ local castingMount = false
 local activeMountID = 0
 local ignoreCVarUpdate = false
 local druidMount = false
+local _destination = nil
+
 BINDING_HEADER_ACTIONCAMPLUS = "ActionCamPlus" 
 local _
 
@@ -35,21 +37,34 @@ ActionCamPlus_ZoomLevelUpdateFrame:SetScript("OnUpdate", function(self, elapsed)
 local camMoving = false
 local lastCamPosition = 0
 local timeSinceLastUpdate = 0
+local timeSinceLastCheck = 0
 function ACP.zoomLevelUpdate(self, elapsed) -- Save where we like our camera to be while walking, mounted, or in combat
 	timeSinceLastUpdate = timeSinceLastUpdate + elapsed
+	timeSinceLastCheck = timeSinceLastCheck + elapsed
 	local camPosition = GetCameraZoom()
+
+	if _destination and timeSinceLastUpdate > .1 then
+		local diff = camPosition - _destination
+		if diff > 0 and diff < .5 then
+			_destination = nil
+			MoveViewInStop()
+		end
+		timeSinceLastCheck = 0
+	end
+
 	if (timeSinceLastUpdate > .25) then
 		timeSinceLastUpdate = 0
 		if camMoving then
 			if camPosition == lastCamPosition and not castingMount then
 				camMoving = false
+				_destination = nil
 
 				ignoreCVarUpdate = true
 				SetCVar("cameraZoomSpeed", ActionCamPlusDB.defaultZoomSpeed)
 				ignoreCVarUpdate = false
 
 				if ActionCamPlusDB.ACP_AddonEnabled then
-					local zoomAmount = GetCameraZoom()
+					local zoomAmount = floor(GetCameraZoom() * 2) / 2
 					if (ActionCamPlusDB.ACP_Mounted and IsMounted()) or (ActionCamPlusDB.ACP_DruidFormMounts and druidMount) then 
 						if ActionCamPlusDB.ACP_MountSpecificZoom then 
 							ActionCamPlusDB.mountZooms[activeMountID] = zoomAmount
@@ -91,7 +106,7 @@ end
 
 function ActionCamPlus_EventFrame:PLAYER_ENTERING_WORLD()
 	ActionCamPlusDB.defaultZoomSpeed = GetCVar("cameraZoomSpeed")
-	ActionCamPlus_EventFrame:UPDATE_SHAPESHIFT_FORM()
+	-- ActionCamPlus_EventFrame:UPDATE_SHAPESHIFT_FORM()
 	ACP.SetActionCam()
 
 	-- if ActionCamPlusDB.ACP_AddonEnabled then 
@@ -125,11 +140,11 @@ function ActionCamPlus_EventFrame:UNIT_SPELLCAST_INTERRUPTED(self, unit)
 end
 
 function ActionCamPlus_EventFrame:PLAYER_MOUNT_DISPLAY_CHANGED()
+	if not castingMount then ACP.SetActionCam() end
+	
 	if castingMount then 
 		castingMount = false
 	end
-
-	ACP.SetActionCam()
 end
 
 local druidTimer = false
@@ -268,16 +283,17 @@ end
 
 function ACP.SetCameraZoom(enabled, destination)
 	if enabled then
+		_destination = destination
 		ignoreCVarUpdate = true
 		SetCVar("cameraZoomSpeed", ActionCamPlusDB.transitionSpeed)
 		ignoreCVarUpdate = false
 		if destination >= GetCameraZoom() then 
 			MoveViewInStop()  -- this line stops the camera from doing whatever it might have been doing before...
 			-- we have to delay for one in-game frame so that our wow's cam doesn't get confused
-			C_Timer.After(.001, function() CameraZoomOut(destination - GetCameraZoom()) end) 
+			C_Timer.After(.001, function() CameraZoomOut(destination - GetCameraZoom() + .5) end)
 		else
 			MoveViewInStop()
-			C_Timer.After(.001, function() CameraZoomIn(GetCameraZoom() - destination) end)
+			C_Timer.After(.001, function() CameraZoomIn(GetCameraZoom() - destination + .5) end)
 		end
 	end
 end
