@@ -5,11 +5,12 @@ local _
 
 -- Positional Variables
 local top = -30
-local leftMargin = 15
+local leftMargin = 30
 local listIndent = 34
 local listItemHeight = -20
 local listVertPad = 6
 local sectionVertPad = 0
+local cameraSliderIndent = -15
 
 -- Draw all the option elements when the options frame loads
 function ActionCamPlusConfig_Setup()
@@ -53,11 +54,30 @@ function ActionCamPlusConfig_Setup()
 		ACP_CombatSetCameraZoom = false,
 		combatCamDistance = 20,
 		
-		transitionSpeed = 12,
-		defaultZoomSpeed = 50,
+		transitionSpeed = 3,
+		defaultZoomSpeed = 40,
 		
 		mountZooms = {}
 	}
+	
+	if not ActionCamPlusDB then
+		ActionCamPlusDB = defaults
+
+	elseif not ActionCamPlusDB.lastVersion or ActionCamPlusDB.lastVersion ~= ACP.version then 
+		ACP.UpdateDB(defaults)
+	end
+
+	----------------------
+	-- Parent Frame
+	----------------------
+	ActionCamPlusOptionsFrame = CreateFrame("Frame", "ActionCamPlusOptionsFrame", UIParent, "BackdropTemplate")
+	ActionCamPlusOptionsFrame:SetToplevel(true)
+	ActionCamPlusOptionsFrame:SetFrameStrata("HIGH")
+	ActionCamPlusOptionsFrame:EnableMouse(true)
+	ActionCamPlusOptionsFrame:SetMovable(true)
+	
+	tinsert(UISpecialFrames, ActionCamPlusOptionsFrame:GetName())
+	ActionCamPlusOptionsFrame:RegisterForDrag("LeftButton")
 
 	local backdropInfo =
 		{
@@ -71,13 +91,30 @@ function ActionCamPlusConfig_Setup()
 		}
 
 	ActionCamPlusOptionsFrame:SetBackdrop(backdropInfo)
-	
-	if not ActionCamPlusDB then
-		ActionCamPlusDB = defaults
 
-	elseif not ActionCamPlusDB.lastVersion or ActionCamPlusDB.lastVersion ~= ACP.version then 
-		ACP.UpdateDB(defaults)
-	end
+	ActionCamPlusOptionsFrame:SetScript("OnMouseDown", function(self) self:StartMoving() end)
+	ActionCamPlusOptionsFrame:SetScript("OnMouseUp", function(self) self:StopMovingOrSizing() end)
+	ActionCamPlusOptionsFrame:SetPoint("CENTER", UIParent)
+	ActionCamPlusOptionsFrame:SetSize(540, 520)
+
+	local titlebox = ActionCamPlusOptionsFrame:CreateTexture("titlebox", "ARTWORK")
+	titlebox:SetSize(360, 64)
+	titlebox:SetPoint("TOP", 0, 12)
+	titlebox:SetTexture("Interface/DialogFrame/UI-DialogBox-Header")
+
+	local titletext = ActionCamPlusOptionsFrame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+	titletext:SetPoint("TOP", titletext:GetParent(), 0, -1.5)
+	titletext:SetText("ActionCamPlus Options")
+
+	local closebutton = CreateFrame("Button", "$parentButtonClose", ActionCamPlusOptionsFrame, "UIPanelButtonTemplate")
+	closebutton:SetText("Close")
+	closebutton:SetSize(80, 20)
+	closebutton:SetPoint("BOTTOM", 0, 20)
+	closebutton:SetScript("OnClick", function() ActionCamPlusOptionsFrame:Hide() end)
+
+	----------------------
+	---------------
+	----------------------
 
 	-- For reference:  ACP.createCheckButton(name, parent, anchor, offX, offY, label, tooltip, framepoint="TOPLEFT", anchorpoint="BOTTOMLEFT")
 
@@ -104,13 +141,16 @@ function ActionCamPlusConfig_Setup()
 
 				-- Set Camera Zoom
 				options.ACP_SetCameraZoom = ACP.createCheckButton("SetCameraZoom", ACP_AddonEnabled, ACP_Pitch, 0,  listVertPad,
-									"Set Camera Zoom",
+									"Auto Set Camera Zoom",
 									"ActionCamPlus will reset your camera zoom distance to where it was before you mounted or entered combat.")
 
+				options.ACP_UnmountedZoomDistance = ACP.createCameraSlider("UnmountedZoomDistance", ACP_SetCameraZoom, "unmountedCamDistance", 1, 39, "Unmounted Camera Distance", ACP_SetCameraZoom, "TOPLEFT", "BOTTOMLEFT", 0, cameraSliderIndent)
+
 	-- Mounted Header
-	options.ACP_Mounted = ACP.createCheckButton("Mounted", ACP_AddonEnabled, ACP_SetCameraZoom, -listIndent,  sectionVertPad,
+	options.ACP_Mounted = ACP.createCheckButton("Mounted", ACP_AddonEnabled, ActionCamPlusOptionsFrame, leftMargin-10, top,
 						"Mounted",
-						"Enables ActionCamPlus behavior while mounted.")
+						"Enables ActionCamPlus behavior while mounted.", 
+						"TOPLEFT", "TOP")
 	-- Mounted Options
 				-- Action Cam
 				options.ACP_MountedActionCam = ACP.createCheckButton("MountedActionCam", ACP_Mounted, ACP_Mounted, listIndent,  5,
@@ -134,7 +174,7 @@ function ActionCamPlusConfig_Setup()
 
 				-- Set Camera Zoom
 				options.ACP_MountedSetCameraZoom = ACP.createCheckButton("MountedSetCameraZoom", ACP_Mounted, ACP_DruidFormMounts, 0,  listVertPad,
-									"Set Camera Zoom",
+									"Auto Set Camera Zoom",
 									"When you mount, ActionCamPlus will set the camera distance to what it was last time you were mounted.")
 
 				-- Mount Specific Zoom
@@ -142,10 +182,13 @@ function ActionCamPlusConfig_Setup()
 									"Mount-Specific Zoom",
 									"ActionCamPlus will remember a zoom level for each mount.")
 
+				options.ACP_MountedZoomDistance = ACP.createCameraSlider("MountedZoomDistance", ACP_MountedSetCameraZoom, "mountedCamDistance", 1, 39, "Mounted Camera Distance", ACP_MountSpecificZoom, "TOPLEFT", "BOTTOMLEFT", 0, cameraSliderIndent)
+
 	-- Combat Header
-	options.ACP_Combat = ACP.createCheckButton("Combat", ACP_AddonEnabled, ACP_MountSpecificZoom, -listIndent, sectionVertPad,
+	options.ACP_Combat = ACP.createCheckButton("Combat", ACP_AddonEnabled, ActionCamPlusOptionsFrame, leftMargin, top,
 						"Combat",
-						"Enables ActionCamPlus behavior while in combat.")
+						"Enables ActionCamPlus behavior while in combat.",
+						"TOPLEFT", "LEFT")
 	-- Combat Options
 				-- Action Cam
 				options.ACP_CombatActionCam = ACP.createCheckButton("CombatActionCam", ACP_Combat, ACP_Combat, listIndent,  5,
@@ -164,9 +207,15 @@ function ActionCamPlusConfig_Setup()
 
 				-- Set Camera Zoom
 				options.ACP_CombatSetCameraZoom = ACP.createCheckButton("CombatSetCameraZoom", ACP_Combat, ACP_CombatPitch, 0,  listVertPad,
-									"Set Camera Zoom",
+									"Auto Set Camera Zoom",
 									"When you enter combat, ActionCamPlus will set the camera distance to what it was last time you were in combat.")
 
+				options.ACP_CombatZoomDistance = ACP.createCameraSlider("CombatZoomDistance", ACP_CombatSetCameraZoom, "combatCamDistance", 1, 39, "Combat Camera Distance", ACP_CombatSetCameraZoom, "TOPLEFT", "BOTTOMLEFT", 0, cameraSliderIndent)
+
+	-- Zoom Options
+	options.ACP_transitionSpeed = ACP.createSlider("transitionSpeed", ActionCamPlusOptionsFrame, "transitionSpeed", 1, 40, "Transition Speed", ActionCamPlusOptionsFrame, "TOPRIGHT", "RIGHT", -leftMargin-20, top-50)
+	options.ACP_defaultZoomSpeed = ACP.createSlider("defaultZoomSpeed", ActionCamPlusOptionsFrame, "defaultZoomSpeed", 1, 40, "Scoll Zoom Speed", ACP_transitionSpeed, "TOP", "BOTTOM", 0, -50)
+	options.ACP_defaultZoomSpeed:HookScript("OnValueChanged", function(self, v) SetCVar("cameraZoomSpeed", floor(v + .5)) end)
 end
 
 function ACP.UpdateDB(defaults)
@@ -183,13 +232,20 @@ end
 function ACP.UpdateDependencies(option)
 	local children = {option:GetChildren()}
 
-	if #children > 0 then
+	if #children > 0 and not option.editbox then
 		for _,child in pairs(children) do
-			if not option:GetChecked() or option:IsSoftDisabled() then
-				child:SoftDisable()
-			
+			if child.editbox then
+				if option:GetChecked() or option:IsSoftDisabled() then
+					child:SoftDisable()
+				else
+					child:SoftEnable()
+				end
 			else
-				child:SoftEnable()
+				if not option:GetChecked() or option:IsSoftDisabled() then
+					child:SoftDisable()
+				else
+					child:SoftEnable()
+				end
 			end
 
 			ACP.UpdateDependencies(child)
@@ -242,10 +298,8 @@ function ActionCamPlusConfig_OnClick(self, mousebutton, down)
 
 	if self:GetChecked() and self:IsSoftDisabled() then
 		self.SoftDisableCheckedTexture:Show()
-
 	else
 		self.SoftDisableCheckedTexture:Hide()
-		
 	end
 
 	ACP.SetActionCam()
@@ -291,4 +345,161 @@ end
 function ActionCamPlusConfig_HideTooltip()
 	GameTooltip:Hide()
 	GameTooltip:ClearLines()
+end
+
+function ACP.createCameraSlider(name, parent, value, min, max, label, anchor, framepoint, anchorpoint, offX, offY)
+	framepoint = framepoint or "TOPLEFT"
+	anchorpoint = anchorpoint or "BOTTOMLEFT"
+
+	local slider = CreateFrame("Slider", "ACP_"..name, parent, "OptionsSliderTemplate")
+	local editbox = CreateFrame("EditBox", "$parentEditBox", slider, "InputBoxTemplate")
+	slider.dbValue = value
+	slider:SetMinMaxValues(min, max)
+
+	if tonumber(ActionCamPlusDB[value]) > max then ActionCamPlusDB[value] = max end
+	slider:SetValue(ActionCamPlusDB[value])
+	slider:SetPoint(framepoint, anchor, anchorpoint, offX, offY)
+
+	slider:SetWidth(150)
+	slider:SetHeight(20)
+	slider:SetOrientation('HORIZONTAL')
+
+	getglobal(slider:GetName() .. 'Low'):SetText(min)
+	getglobal(slider:GetName() .. 'High'):SetText(max)
+	getglobal(slider:GetName() .. 'Text'):SetText(label)
+
+	slider:SetValueStep(.25) slider:SetStepsPerPage(5)
+
+	editbox:SetSize(30,30)
+	editbox:ClearAllPoints()
+	editbox:SetPoint("TOP", slider, "BOTTOM", 0, 5)
+	editbox:SetText(slider:GetValue())
+	editbox:SetAutoFocus(false)
+
+	slider:SetScript("OnValueChanged", function(self, v)
+		v = floor(v*2 + .4)/2
+		ActionCamPlusDB[self.dbValue] = v
+		self.editbox:SetText(v)
+		ACP.testCameraDistance(v)
+	end)
+	editbox:SetScript("OnTextChanged", function(self)
+		local val = self:GetText()
+		if tonumber(val) then
+			self:GetParent():SetValue(val)
+		end
+	end)
+	editbox:SetScript("OnEnterPressed", function(self)
+		local val = self:GetText()
+		if tonumber(val) then
+			self:GetParent():SetValue(val)
+			self:ClearFocus()
+		end
+	end)
+
+	slider.SoftDisable = function(self) 
+		ACP.sliderSetEnabled(self, false)
+	end
+	slider.SoftEnable = function(self)
+		ACP.sliderSetEnabled(self, true)
+	end
+	slider.IsSoftDisabled = function(self) return self:IsEnabled() end
+
+	slider:Show()
+	slider.editbox = editbox
+
+	return slider
+end
+
+
+function ACP.createSlider(name, parent, value, min, max, label, anchor, framepoint, anchorpoint, offX, offY)
+	framepoint = framepoint or "TOPLEFT"
+	anchorpoint = anchorpoint or "BOTTOMLEFT"
+
+	local slider = CreateFrame("Slider", "ACP_"..name, parent, "OptionsSliderTemplate")
+	local editbox = CreateFrame("EditBox", "$parentEditBox", slider, "InputBoxTemplate")
+	slider.dbValue = value
+	slider:SetMinMaxValues(min, max)
+
+	if tonumber(ActionCamPlusDB[value]) > max then ActionCamPlusDB[value] = max end
+	slider:SetValue(ActionCamPlusDB[value])
+	slider:SetPoint(framepoint, anchor, anchorpoint, offX, offY)
+
+	slider:SetWidth(200)
+	slider:SetHeight(20)
+	slider:SetOrientation('HORIZONTAL')
+
+	getglobal(slider:GetName() .. 'Low'):SetText(min)
+	getglobal(slider:GetName() .. 'High'):SetText(max)
+	getglobal(slider:GetName() .. 'Text'):SetText(label)
+
+	slider:SetValueStep(1)
+	slider:SetStepsPerPage(5)
+
+	editbox:SetSize(30,30)
+	editbox:ClearAllPoints()
+	editbox:SetPoint("TOP", slider, "BOTTOM", 0, 5)
+	editbox:SetText(slider:GetValue())
+	editbox:SetAutoFocus(false)
+
+	slider:SetScript("OnValueChanged", function(self, v)
+		v = floor(v + .5)
+		ActionCamPlusDB[self.dbValue] = v
+		self.editbox:SetText(v)
+	end)
+	editbox:SetScript("OnTextChanged", function(self)
+		local val = self:GetText()
+		if tonumber(val) then
+			self:GetParent():SetValue(val)
+		end
+	end)
+	editbox:SetScript("OnEnterPressed", function(self)
+		local val = self:GetText()
+		if tonumber(val) then
+			self:GetParent():SetValue(val)
+			self:ClearFocus()
+		end
+	end)
+
+	slider:Show()
+	slider.editbox = editbox
+
+	return slider
+end
+
+function ACP.sliderSetEnabled(slider, value)
+	local color, boxcolor
+
+	if value then
+		slider:Enable()
+		slider.editbox:Enable()
+		namecolor = NORMAL_FONT_COLOR
+		boxcolor = WHITE_FONT_COLOR
+	else
+		slider:Disable()
+		slider.editbox:Disable()
+		namecolor = GRAY_FONT_COLOR
+		boxcolor = GRAY_FONT_COLOR
+	end
+	
+	getglobal(slider:GetName() .. 'Text'):SetTextColor(namecolor.r, namecolor.g, namecolor.b)
+	slider.editbox:SetTextColor(boxcolor.r, boxcolor.g, boxcolor.b)
+end
+
+local cameraTestThrottle
+local cameraTestZoom
+function ACP.testCameraDistance(value)
+	cameraTestZoom = value
+	if cameraTestThrottle then return end
+
+	cameraTestThrottle = C_Timer.NewTicker(.5, function() 
+		ACP.SetCameraZoom(cameraTestZoom)
+		cameraTestThrottle = nil
+	end, 1)
+end
+
+function ACP.UpdateZoomOptions()
+	local sliders = {options.ACP_UnmountedZoomDistance, options.ACP_MountedZoomDistance, options.ACP_CombatZoomDistance}
+	for i = 1, #sliders do
+		sliders[i]:SetValue(ActionCamPlusDB[sliders[i].dbValue])
+	end
 end

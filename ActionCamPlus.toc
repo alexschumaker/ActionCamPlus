@@ -6,6 +6,5 @@
 ## Version: 0.21
 ## OptionalDeps: ACP
 
-ActionCamPlusOptions.xml
 ActionCamPlus.lua
 ActionCamPlusConfig.lua
