@@ -36,6 +36,7 @@ function ActionCamPlusConfig_Setup()
 		ACP_Focusing = false,
 		ACP_Pitch = true,
 		ACP_SetCameraZoom = true,
+		ACP_AutoSetCameraDistance = true,
 		unmountedCamDistance = 20,
 
 		ACP_Mounted = true,
@@ -44,6 +45,7 @@ function ActionCamPlusConfig_Setup()
 		ACP_MountedPitch = false,
 		ACP_DruidFormMounts = true,
 		ACP_MountedSetCameraZoom = true,
+		ACP_AutoSetMountedCameraDistance = true,
 		ACP_MountSpecificZoom = false,
 		mountedCamDistance = 30,
 
@@ -52,6 +54,7 @@ function ActionCamPlusConfig_Setup()
 		ACP_CombatFocusing = true,
 		ACP_CombatPitch = true,
 		ACP_CombatSetCameraZoom = false,
+		ACP_AutoSetCombatCameraDistance = true,
 		combatCamDistance = 20,
 		
 		transitionSpeed = 3,
@@ -95,7 +98,7 @@ function ActionCamPlusConfig_Setup()
 	ActionCamPlusOptionsFrame:SetScript("OnMouseDown", function(self) self:StartMoving() end)
 	ActionCamPlusOptionsFrame:SetScript("OnMouseUp", function(self) self:StopMovingOrSizing() end)
 	ActionCamPlusOptionsFrame:SetPoint("CENTER", UIParent)
-	ActionCamPlusOptionsFrame:SetSize(540, 520)
+	ActionCamPlusOptionsFrame:SetSize(540, 580)
 
 	local titlebox = ActionCamPlusOptionsFrame:CreateTexture("titlebox", "ARTWORK")
 	titlebox:SetSize(360, 64)
@@ -141,10 +144,15 @@ function ActionCamPlusConfig_Setup()
 
 				-- Set Camera Zoom
 				options.ACP_SetCameraZoom = ACP.createCheckButton("SetCameraZoom", ACP_AddonEnabled, ACP_Pitch, 0,  listVertPad,
-									"Auto Set Camera Zoom",
-									"ActionCamPlus will reset your camera zoom distance to where it was before you mounted or entered combat.")
+									"Change Camera Zoom",
+									"ActionCamPlus will change your camera distance to your unmounted or out of combat setting.")
 
-				options.ACP_UnmountedZoomDistance = ACP.createCameraSlider("UnmountedZoomDistance", ACP_SetCameraZoom, "unmountedCamDistance", 1, 39, "Unmounted Camera Distance", ACP_SetCameraZoom, "TOPLEFT", "BOTTOMLEFT", 0, cameraSliderIndent)
+				-- Auto Set Camera Distance
+				options.ACP_AutoSetCameraDistance = ACP.createCheckButton("AutoSetCameraDistance", ACP_SetCameraZoom, ACP_SetCameraZoom, 0,  listVertPad,
+									"Auto Set Camera Distance",
+									"ActionCamPlus will automatically set your default camera distance to wherever you scroll.")
+
+				options.ACP_UnmountedZoomDistance = ACP.createCameraSlider("UnmountedZoomDistance", ACP_AutoSetCameraDistance, "unmountedCamDistance", 1, 39, "Unmounted Camera Distance", ACP_AutoSetCameraDistance, "TOPLEFT", "BOTTOMLEFT", 0, cameraSliderIndent)
 
 	-- Mounted Header
 	options.ACP_Mounted = ACP.createCheckButton("Mounted", ACP_AddonEnabled, ActionCamPlusOptionsFrame, leftMargin-10, top,
@@ -174,18 +182,23 @@ function ActionCamPlusConfig_Setup()
 
 				-- Set Camera Zoom
 				options.ACP_MountedSetCameraZoom = ACP.createCheckButton("MountedSetCameraZoom", ACP_Mounted, ACP_DruidFormMounts, 0,  listVertPad,
-									"Auto Set Camera Zoom",
-									"When you mount, ActionCamPlus will set the camera distance to what it was last time you were mounted.")
+									"Change Camera Zoom",
+									"When you mount, ActionCamPlus will set the camera distance to your mounted setting.")
+
+				-- Auto Set Camera Distance
+				options.ACP_AutoSetMountedCameraDistance = ACP.createCheckButton("AutoSetMountedCameraDistance", ACP_MountedSetCameraZoom, ACP_MountedSetCameraZoom, 0,  listVertPad,
+									"Auto Set Camera Distance",
+									"While mounted, ActionCamPlus will set your mounted camera distance to wherever you scroll.")
 
 				-- Mount Specific Zoom
-				options.ACP_MountSpecificZoom = ACP.createCheckButton("MountSpecificZoom", ACP_MountedSetCameraZoom, ACP_MountedSetCameraZoom, 0,  listVertPad,
+				options.ACP_MountSpecificZoom = ACP.createCheckButton("MountSpecificZoom", ACP_MountedSetCameraZoom, ACP_AutoSetMountedCameraDistance, 0,  listVertPad,
 									"Mount-Specific Zoom",
 									"ActionCamPlus will remember a zoom level for each mount.")
 
-				options.ACP_MountedZoomDistance = ACP.createCameraSlider("MountedZoomDistance", ACP_MountedSetCameraZoom, "mountedCamDistance", 1, 39, "Mounted Camera Distance", ACP_MountSpecificZoom, "TOPLEFT", "BOTTOMLEFT", 0, cameraSliderIndent)
+				options.ACP_MountedZoomDistance = ACP.createCameraSlider("MountedZoomDistance", ACP_AutoSetMountedCameraDistance, "mountedCamDistance", 1, 39, "Mounted Camera Distance", ACP_MountSpecificZoom, "TOPLEFT", "BOTTOMLEFT", 0, cameraSliderIndent)
 
 	-- Combat Header
-	options.ACP_Combat = ACP.createCheckButton("Combat", ACP_AddonEnabled, ActionCamPlusOptionsFrame, leftMargin, top,
+	options.ACP_Combat = ACP.createCheckButton("Combat", ACP_AddonEnabled, ActionCamPlusOptionsFrame, leftMargin, 0,
 						"Combat",
 						"Enables ActionCamPlus behavior while in combat.",
 						"TOPLEFT", "LEFT")
@@ -207,10 +220,15 @@ function ActionCamPlusConfig_Setup()
 
 				-- Set Camera Zoom
 				options.ACP_CombatSetCameraZoom = ACP.createCheckButton("CombatSetCameraZoom", ACP_Combat, ACP_CombatPitch, 0,  listVertPad,
-									"Auto Set Camera Zoom",
-									"When you enter combat, ActionCamPlus will set the camera distance to what it was last time you were in combat.")
+									"Change Camera Zoom",
+									"When you enter combat, ActionCamPlus will set the camera distance to your combat setting.")
 
-				options.ACP_CombatZoomDistance = ACP.createCameraSlider("CombatZoomDistance", ACP_CombatSetCameraZoom, "combatCamDistance", 1, 39, "Combat Camera Distance", ACP_CombatSetCameraZoom, "TOPLEFT", "BOTTOMLEFT", 0, cameraSliderIndent)
+				-- Auto Set Camera Distance
+				options.ACP_AutoSetCombatCameraDistance = ACP.createCheckButton("AutoSetCombatCameraDistance", ACP_CombatSetCameraZoom, ACP_CombatSetCameraZoom, 0,  listVertPad,
+									"Auto Set Camera Distance",
+									"While in combat, ActionCamPlus will set your combat setting to wherever you scroll.")
+
+				options.ACP_CombatZoomDistance = ACP.createCameraSlider("CombatZoomDistance", ACP_AutoSetCombatCameraDistance, "combatCamDistance", 1, 39, "Combat Camera Distance", ACP_AutoSetCombatCameraDistance, "TOPLEFT", "BOTTOMLEFT", 0, cameraSliderIndent)
 
 	-- Zoom Options
 	options.ACP_transitionSpeed = ACP.createSlider("transitionSpeed", ActionCamPlusOptionsFrame, "transitionSpeed", 1, 40, "Transition Speed", ActionCamPlusOptionsFrame, "TOPRIGHT", "RIGHT", -leftMargin-20, top-50)

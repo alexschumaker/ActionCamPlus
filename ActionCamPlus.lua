@@ -79,16 +79,16 @@ function ACP.zoomLevelUpdate(self, elapsed) -- Save where we like our camera to 
 
 				if ActionCamPlusDB.ACP_AddonEnabled then
 					local zoomAmount = floor(GetCameraZoom() * 2) / 2
-					if ((ActionCamPlusDB.ACP_Mounted and IsMounted()) or (ActionCamPlusDB.ACP_DruidFormMounts and ACP.CheckDruidForm())) and ActionCamPlusDB.ACP_MountedSetCameraZoom then 
+					if ((ActionCamPlusDB.ACP_Mounted and IsMounted()) or (ActionCamPlusDB.ACP_DruidFormMounts and ACP.CheckDruidForm())) and ActionCamPlusDB.ACP_AutoSetMountedCameraDistance then 
 						if ActionCamPlusDB.ACP_MountSpecificZoom then 
 							ActionCamPlusDB.mountZooms[activeMountID] = zoomAmount
 						end
 
 						ActionCamPlusDB.mountedCamDistance = zoomAmount
 
-					elseif ActionCamPlusDB.ACP_Combat and ActionCamPlusDB.ACP_CombatSetCameraZoom and UnitAffectingCombat("player") then
+					elseif ActionCamPlusDB.ACP_Combat and ActionCamPlusDB.ACP_AutoSetCombatCameraDistance and UnitAffectingCombat("player") then
 						ActionCamPlusDB.combatCamDistance = zoomAmount
-					elseif ActionCamPlusDB.ACP_SetCameraZoom then
+					elseif ActionCamPlusDB.ACP_AutoSetCameraDistance then
 						ActionCamPlusDB.unmountedCamDistance = zoomAmount
 					end
 
@@ -121,6 +121,7 @@ end
 
 function ActionCamPlus_EventFrame:PLAYER_ENTERING_WORLD()
 	ActionCamPlusDB.defaultZoomSpeed = GetCVar("cameraZoomSpeed")
+	SetCVar("CameraKeepCharacterCentered", 0)
 	-- ActionCamPlus_EventFrame:UPDATE_SHAPESHIFT_FORM()
 	ACP.SetActionCam()
 
@@ -273,22 +274,25 @@ function ACP.SetActionCam() -- This function basically decides everything
 			ACP.SetFocus(ActionCamPlusDB.ACP_MountedFocusing)
 			ACP.SetPitch(ActionCamPlusDB.ACP_MountedPitch)
 
+			if not ActionCamPlusDB.ACP_MountedSetCameraZoom then return end
 			if ActionCamPlusDB.ACP_MountSpecificZoom and ActionCamPlusDB.mountZooms[activeMountID] then
 				ACP.SetCameraZoom(ActionCamPlusDB.mountZooms[activeMountID])
 			else
 				ACP.SetCameraZoom(ActionCamPlusDB.mountedCamDistance)
 			end
-
 		elseif combat and ActionCamPlusDB.ACP_Combat then
 			ACP.ActionCam(ActionCamPlusDB.ACP_CombatActionCam)
 			ACP.SetFocus(ActionCamPlusDB.ACP_CombatFocusing)
 			ACP.SetPitch(ActionCamPlusDB.ACP_CombatPitch)
-			ACP.SetCameraZoom(ActionCamPlusDB.combatCamDistance)
 
+			if not ActionCamPlusDB.ACP_CombatSetCameraZoom then return end
+			ACP.SetCameraZoom(ActionCamPlusDB.combatCamDistance)
 		else
 			ACP.ActionCam(ActionCamPlusDB.ACP_ActionCam)
 			ACP.SetFocus(ActionCamPlusDB.ACP_Focusing)
 			ACP.SetPitch(ActionCamPlusDB.ACP_Pitch)
+
+			if not ActionCamPlusDB.ACP_SetCameraZoom then return end
 			ACP.SetCameraZoom(ActionCamPlusDB.unmountedCamDistance)
 		end
 	else
