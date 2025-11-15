@@ -5,6 +5,7 @@ local castingMount = false
 local activeMountID = 0
 local ignoreCVarUpdate = false
 local _destination = nil
+local isDruid
 
 BINDING_HEADER_ACTIONCAMPLUS = "ActionCamPlus" 
 local _
@@ -38,7 +39,11 @@ ActionCamPlus_EventFrame:SetScript("OnEvent", function(self,event,...) self[even
 
 -- Create frame for tracking where we like to have our camera set
 local ActionCamPlus_ZoomLevelUpdateFrame = CreateFrame("Frame")
-ActionCamPlus_ZoomLevelUpdateFrame:SetScript("OnUpdate", function(self, elapsed) ACP.zoomLevelUpdate(self, elapsed) end)
+ActionCamPlus_ZoomLevelUpdateFrame:SetScript("OnUpdate", function(self, elapsed)
+	ACP.zoomLevelUpdate(self, elapsed)
+	ACP.smoothCameraUpdate(self, elapsed)
+	ACP.smoothFocusInteractUpdate(self, elapsed)
+end)
 
 ActionCamPlus_EventFrame:SetScript("OnKeyDown", function() 
 	keyboardInput = true
@@ -100,6 +105,46 @@ function ACP.zoomLevelUpdate(self, elapsed) -- constantly monitor camera zoom an
 	end
 end
 
+
+-- animate smooth camera movements
+local offsetDestination
+local offsetStart
+local offsetEnd
+local offsetPath
+local offsetTime
+local offsetDuration = 2
+function ACP.smoothCameraUpdate(self, elapsed)
+	if not offsetDestination then return end
+
+	if offsetDestination ~= offsetEnd then 
+		offsetEnd = offsetDestination
+		offsetCancel()
+		offsetDestination = offsetEnd
+		return
+	end
+
+	if not offsetStart then
+		offsetEnd = offsetDestination
+		offsetTime = 0
+		offsetStart = GetCVar('test_cameraOverShoulder')
+		offsetPath = offsetDestination - offsetStart
+		
+		if offsetPath == 0 then offsetCancel() return end
+	else offsetTime = offsetTime + elapsed end
+	
+	local t = offsetTime / offsetDuration
+	SetCVar("test_cameraOverShoulder", offsetStart + (cubicBezier(t) * offsetPath))
+	if offsetTime >= offsetDuration then offsetCancel() end
+end
+
+function ACP.smoothFocusInteractUpdate(self, elapsed)
+	return
+end
+
+function offsetCancel()
+	offsetDestination, offsetStart, offsetTime = nil, nil, nil
+end
+
 --init
 function ActionCamPlus_EventFrame:ADDON_LOADED(self, addon)
 	if addon == addonName then
@@ -114,6 +159,7 @@ function ActionCamPlus_EventFrame:ADDON_LOADED(self, addon)
 
 		ActionCamPlusConfig_Setup()
 		UIParent:UnregisterEvent("EXPERIMENTAL_CVAR_CONFIRMATION_NEEDED")
+		_, isDruid = UnitClass("player")
 	end
 end
 
@@ -124,7 +170,7 @@ function ActionCamPlus_EventFrame:PLAYER_ENTERING_WORLD()
 		ActionCamPlusDB.defaultZoomSpeed = GetCVar("cameraZoomSpeed")
 	end
 	SetCVar("CameraKeepCharacterCentered", 0)
-	
+
 	ACP.SpellIsMount(spellID) -- call once to init mountIDs
 	activeMountID = ACP.getMountID()
 
@@ -252,6 +298,9 @@ function SlashCmdList.ACTIONCAMPLUS(msg)
 		SetCVar("cameraZoomSpeed", tonumber(arg2))
 		ActionCamPlusDB.defaultZoomSpeed = tonumber(arg2)
 
+	elseif arg1 == 'd' then
+		offsetDestination = tonumber(arg2)
+
 	elseif arg1 == "t" or arg1 == "test" then 
 		-- ACP.SetActionCam()
 		-- print(GetCameraZoom())
@@ -321,9 +370,11 @@ end
 
 function ACP.ActionCam(enable)
 	if enable then
-		SetCVar("test_cameraOverShoulder", ActionCamPlusDB.leftShoulder and -1 or 1)
+		-- SetCVar("test_cameraOverShoulder", ActionCamPlusDB.leftShoulder and -1 or 1)
+		offsetDestination = ActionCamPlusDB.leftShoulder and -1 or 1
 	else
-		SetCVar("test_cameraOverShoulder", 0)
+		-- SetCVar("test_cameraOverShoulder", 0)
+		offsetDestination = 0
 	end
 end
 -- GetCVar("test_cameraOverShoulder")
@@ -353,6 +404,10 @@ function ACP.SetPitch(enable)
 end
 
 function ACP.SetCameraZoom(destination)
+	if isDruid and tContains({1,2,4,5,31,32,33,34,35,36}, GetShapeshiftFormID()) then
+		destination = destination + 1.5
+	end
+
 	if abs(destination - GetCameraZoom()) > .5 then
 		-- MoveViewInStop() -- this line stops the camera from doing whatever it might have been doing before...
 		-- MoveViewOutStop()
@@ -362,6 +417,7 @@ function ACP.SetCameraZoom(destination)
 
 		-- we have to delay for one in-game frame so that our wow's cam doesn't get confused
 		-- also, set the target .5 further to account for the general inaccuracy of this function. It should be sorted out by the stop script
+
 		if destination >= GetCameraZoom() then 
 			-- C_Timer.After(.001, function() CameraZoomOut(destination - GetCameraZoom() + .5) end)
 			ACP.doubleDelay(function() CameraZoomOut(destination - GetCameraZoom() + .5) end)
@@ -435,3 +491,13 @@ end
 -- 		return IsMounted()
 -- 	end 
 -- end
+
+local p0, p1, p2, p3 = 0, 1, 1, 1
+function cubicBezier(t)
+	if t > 1 then return 1 end
+	return p0*(1-t)^3 + 3*p1*t*(1-t)^2 + 3*p2*(1-t)*t^2 + p3*t^3
+
+	-- quadratic bezier
+	-- local p0, p1, p2 = 0, 1, 1
+	-- return (1-t)*((1-t)*p0 + t*p1) + t * ((1-t)*p1 + t*p2)
+end
