@@ -7,7 +7,7 @@ local ignoreCVarUpdate = false
 local _destination = nil
 local isDruid
 
-BINDING_HEADER_ACTIONCAMPLUS = "ActionCamPlus" 
+BINDING_HEADER_ACTIONCAMPLUS = "ActionCamPlus"
 local _
 
 local ActionCamPlus_EventFrame = CreateFrame("Frame", 'ActionCamPlus_EventFrame')
@@ -15,10 +15,12 @@ local ActionCamPlus_EventFrame = CreateFrame("Frame", 'ActionCamPlus_EventFrame'
 ActionCamPlus_EventFrame:RegisterEvent("ADDON_LOADED")
 ActionCamPlus_EventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 ActionCamPlus_EventFrame:RegisterEvent("CVAR_UPDATE")
+ActionCamPlus_EventFrame:RegisterEvent("UPDATE_BINDINGS")
 
 -- Mount Events
 ActionCamPlus_EventFrame:RegisterEvent("UNIT_SPELLCAST_START")
 ActionCamPlus_EventFrame:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
+ActionCamPlus_EventFrame:RegisterEvent("UNIT_SPELLCAST_FAILED")
 ActionCamPlus_EventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 ActionCamPlus_EventFrame:RegisterEvent("PLAYER_MOUNT_DISPLAY_CHANGED")
 if select(2, UnitClass("player")) == "DRUID" then
@@ -45,11 +47,11 @@ ActionCamPlus_ZoomLevelUpdateFrame:SetScript("OnUpdate", function(self, elapsed)
 	ACP.smoothFocusInteractUpdate(self, elapsed)
 end)
 
-ActionCamPlus_EventFrame:SetScript("OnKeyDown", function() 
-	keyboardInput = true
-	C_Timer.After(2, function() keyboardInput = false end)
-end)
-ActionCamPlus_EventFrame:SetPropagateKeyboardInput(true)
+-- ActionCamPlus_EventFrame:SetScript("OnKeyDown", function() 
+-- 	keyboardInput = true
+-- 	C_Timer.After(2, function() keyboardInput = false end)
+-- end)
+-- ActionCamPlus_EventFrame:SetPropagateKeyboardInput(true)
 
 local camMoving = false
 local lastCamPosition = 0
@@ -170,11 +172,13 @@ function ActionCamPlus_EventFrame:PLAYER_ENTERING_WORLD()
 		ActionCamPlusDB.defaultZoomSpeed = GetCVar("cameraZoomSpeed")
 	end
 	SetCVar("CameraKeepCharacterCentered", 0)
+	SetCVar("CameraReduceUnexpectedMovement", 0)
 
 	ACP.SpellIsMount(spellID) -- call once to init mountIDs
 	activeMountID = ACP.getMountID()
 
 	ACP.SetActionCam()
+	ACP.OverrideZoomKeybinds()
 
 	-- ActionCamPlus_EventFrame:UPDATE_SHAPESHIFT_FORM()
 	-- if ActionCamPlusDB.ACP_AddonEnabled then 
@@ -191,6 +195,23 @@ function ActionCamPlus_EventFrame:CVAR_UPDATE(self, CVar, value)
 	end
 end
 
+local cameraZoomOverrideFrame
+function ActionCamPlus_EventFrame:UPDATE_BINDINGS(self)
+	if not cameraZoomOverrideFrame then return end
+
+	local iterator = {{keys = cameraZoomOverrideFrame.inKeys, varName = "CAMERAZOOMIN"}, {keys = cameraZoomOverrideFrame.outKeys, varName = "CAMERAZOOMOUT"}}
+	for _,dir in pairs(iterator) do
+		local keys = {}
+		for _,key in pairs({GetBindingKey(dir.varName)}) do
+			tinsert(keys, key)
+		end
+		if not tCompare(dir.keys, keys) then
+			ACP.OverrideZoomKeybinds()
+			return
+		end
+	end
+end
+
 -- Mount Event Functions
 function ActionCamPlus_EventFrame:UNIT_SPELLCAST_START(self, unit, counter, spellID)
 	if unit == "player" and ACP.SpellIsMount(spellID) then
@@ -203,6 +224,14 @@ function ActionCamPlus_EventFrame:UNIT_SPELLCAST_START(self, unit, counter, spel
 end
 
 function ActionCamPlus_EventFrame:UNIT_SPELLCAST_INTERRUPTED(self, unit)
+	ACP.MountCastNotSuccessfull(unit)
+end
+
+function ActionCamPlus_EventFrame:UNIT_SPELLCAST_FAILED(self, unit)
+	ACP.MountCastNotSuccessfull(unit)
+end
+
+function ACP.MountCastNotSuccessfull(unit)
 	if unit == "player" and castingMount and not IsMounted() then
 		castingMount = false
 		ACP.SetActionCam()
@@ -285,11 +314,7 @@ function SlashCmdList.ACTIONCAMPLUS(msg)
 		ACP.SetActionCam()
 
 	elseif arg1 == "h" or arg1 == "config" then 
-		if ActionCamPlusOptionsFrame:IsShown() then 
-			ActionCamPlusOptionsFrame:Hide()
-		else
-			ActionCamPlusOptionsFrame:Show()
-		end
+		ActionCamPlus_ToggleConfigFrame()
 
 	elseif arg1 == "transitionspeed" or arg1 == "ts" then 
 		ActionCamPlusDB.transitionSpeed = tonumber(arg2)
@@ -409,8 +434,8 @@ function ACP.SetCameraZoom(destination)
 	end
 
 	if abs(destination - GetCameraZoom()) > .5 then
-		-- MoveViewInStop() -- this line stops the camera from doing whatever it might have been doing before...
-		-- MoveViewOutStop()
+		MoveViewInStop() -- this line stops the camera from doing whatever it might have been doing before...
+		MoveViewOutStop()
 
 		_destination = destination
 		ACP.setZoomSpeed(true)
@@ -450,6 +475,10 @@ function ACP.setZoomSpeed(transition)
 	ignoreCVarUpdate = false
 end
 
+function ACP.setZoomSmoothness(multiplier) -- 0-1
+	SetCVar("cameraDistanceRateMult", multiplier >= 1 and 1 or multiplier <= 0 and 0 or multiplier)
+end
+
 function ACP.getMountID()
 	if not IsMounted() then return nil end
 
@@ -464,6 +493,65 @@ function ACP.getMountID()
     end
 end
 
+function ACP.OverrideZoomKeybinds()
+	local iterator = {{ out = false, varName = "CAMERAZOOMIN", frameName = "ZoomOverrideIn" }, { out = true, varName = "CAMERAZOOMOUT", frameName = "ZoomOverrideOut" }}
+
+	if not cameraZoomOverrideFrame then
+		cameraZoomOverrideFrame = CreateFrame("Frame", "cameraZoomOverrideFrame", ActionCamPlus_EventFrame)
+
+		-- create two buttons, in and out
+		for _,dir in pairs(iterator) do
+			local f = CreateFrame("Button", dir.frameName, cameraZoomOverrideFrame, "SecureActionButtonTemplate")
+
+			f:RegisterForClicks('AnyDown')
+			f:SetAttribute("type", 'macro')
+			f:SetAttribute('macrotext', '/run ACP_ZoomOverride('..tostring(dir.out)..')')
+		end
+	else
+		ClearOverrideBindings(cameraZoomOverrideFrame)
+	end
+
+	-- set override for each zoom in and zoom out bind
+	for _,dir in pairs(iterator) do
+		local dirKeys = {}
+		for _,key in pairs({GetBindingKey(dir.varName)}) do
+			tinsert(dirKeys, key)
+			SetOverrideBinding(cameraZoomOverrideFrame, false, tostring(key), 'CLICK '..dir.frameName..':LeftButton')
+		end
+
+		cameraZoomOverrideFrame[(dir.out and "out" or "in").."Keys"] = dirKeys
+	end
+end
+
+function ACP_ZoomOverride(out)
+	if GetCVar("cameraZoomSpeed") ~= ActionCamPlusDB.defaultZoomSpeed then
+		SetCVar("cameraZoomSpeed", ActionCamPlusDB.defaultZoomSpeed)
+	end
+
+	local increment = 1
+	local zoomFunc
+
+	if out then zoomFunc = function(increment) CameraZoomOut(increment) end
+	else zoomFunc = function(increment) CameraZoomIn(increment) end
+	end
+
+	if camMoving then
+		MoveViewOutStop()
+		MoveViewInStop()
+		C_Timer.After(0, function() zoomFunc(increment) end)
+	else
+		zoomFunc(increment)
+	end
+end
+
+function ActionCamPlus_ToggleConfigFrame()
+	if ActionCamPlusOptionsFrame:IsShown() then
+		ActionCamPlusOptionsFrame:Hide()
+	else
+		ActionCamPlusOptionsFrame:Show()
+	end
+end
+
 -- Is spell id a mount?
 mountSpellIDs = nil
 function ACP.SpellIsMount(spellID)
@@ -473,6 +561,7 @@ function ACP.SpellIsMount(spellID)
 			name, mountSpellID, _ = C_MountJournal.GetMountInfoByID(k)
 			if mountSpellID then mountSpellIDs[mountSpellID] = true end
 		end
+		mountSpellIDs[460013] = true -- G-99 Breakneck
 	end
 
 	return mountSpellIDs[spellID] or false
