@@ -262,7 +262,7 @@ function ActionCamPlusConfig_Setup()
 	options.ACP_transitionSpeed = ACP.createSlider("transitionSpeed", ActionCamPlusOptionsFrame, "transitionSpeed", 1, 40, 
 					"Transition Speed", ActionCamPlusOptionsFrame, "TOPRIGHT", "RIGHT", -leftMargin-20, top-10)
 	options.ACP_defaultZoomSpeed = ACP.createSlider("defaultZoomSpeed", ActionCamPlusOptionsFrame, "defaultZoomSpeed", 1, 40, 
-					"Scoll Zoom Speed", transitionSpeed, "TOP", "BOTTOM", 0, -40)
+					"Scroll Zoom Speed", transitionSpeed, "TOP", "BOTTOM", 0, -40)
 	options.ACP_focusStrengthHorizontal = ACP.createSlider("focusStrengthHorizontal", ActionCamPlusOptionsFrame, "focusStrengthHorizontal", 0, 1, 
 					"Horizontal Focus Strength", defaultZoomSpeed, "TOP", "BOTTOM", 0, -40)
 	options.ACP_focusStrengthVertical = ACP.createSlider("focusStrengthVertical", ActionCamPlusOptionsFrame, "focusStrengthVertical", 0, 1, 

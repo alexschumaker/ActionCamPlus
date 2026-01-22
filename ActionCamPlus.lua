@@ -243,7 +243,7 @@ function ActionCamPlus_EventFrame:UNIT_SPELLCAST_SUCCEEDED(self, unit)
 end
 
 function ActionCamPlus_EventFrame:PLAYER_MOUNT_DISPLAY_CHANGED()
-	if not castingMount then ACP.SetActionCam() end 
+	if not castingMount then ACP.SetActionCam() end
 end
 
 function ActionCamPlus_EventFrame:UPDATE_SHAPESHIFT_FORM() -- druid form check
@@ -326,20 +326,25 @@ function SlashCmdList.ACTIONCAMPLUS(msg)
 	elseif arg1 == 'd' then
 		offsetDestination = tonumber(arg2)
 
-	elseif arg1 == "t" or arg1 == "test" then 
+	elseif arg1 == "t" or arg1 == "test" then
 		-- ACP.SetActionCam()
 		-- print(GetCameraZoom())
 		--TEST CODE
 		-- SetCVar("test_cameraDynamicPitchSmartPivotCutoffDist", arg2)
 		-- print(ActionCamPlusDB.transitionSpeed)
-		ACP_CVars = {}
-		local commands = ConsoleGetAllCommands()
-		for i=1,#commands do
-			if strfind(string.upper(commands[i].command), 'TEST') then
-				ACP_CVars[commands[i].command] = commands[i]
-			end
+		-- ACP_CVars = {}
+		-- local commands = ConsoleGetAllCommands()
+		-- for i=1,#commands do
+		-- 	if strfind(string.upper(commands[i].command), 'TEST') then
+		-- 		ACP_CVars[commands[i].command] = commands[i]
+		-- 	end
+		-- end
+		if test_toggle then
+			ACP.OverrideZoomKeybinds()
+		else
+			ClearOverrideBindings(cameraZoomOverrideFrame)
 		end
-
+		test_toggle = not test_toggle
 		--END TEST CODE
 	end
 end
@@ -356,7 +361,7 @@ function ACP.SetActionCam() -- This function basically decides everything
 	if ActionCamPlusDB.ACP_AddonEnabled then
 		local mounted = IsMounted() or castingMount or ACP.CheckDruidForm()
 		local combat = UnitAffectingCombat("player")
-		if mounted and ActionCamPlusDB.ACP_Mounted then 
+		if mounted and ActionCamPlusDB.ACP_Mounted then
 			ACP.ActionCam(ActionCamPlusDB.ACP_MountedActionCam)
 			ACP.SetFocus(ActionCamPlusDB.ACP_MountedFocusing)
 			ACP.SetFocusInteract(ActionCamPlusDB.ACP_MountedFocusingInteract)
@@ -433,9 +438,14 @@ function ACP.SetCameraZoom(destination)
 		destination = destination + 1.5
 	end
 
-	if abs(destination - GetCameraZoom()) > .5 then
-		MoveViewInStop() -- this line stops the camera from doing whatever it might have been doing before...
-		MoveViewOutStop()
+	if destination == _destination then return end
+
+	local currentZoom = GetCameraZoom()
+	if abs(destination - currentZoom) > .5 then
+		if not _destination or ((_destination > currentZoom) == (destination > currentZoom)) then
+			MoveViewInStop() -- this line stops the camera from doing whatever it might have been doing before...
+			MoveViewOutStop()
+		end
 
 		_destination = destination
 		ACP.setZoomSpeed(true)
@@ -443,12 +453,12 @@ function ACP.SetCameraZoom(destination)
 		-- we have to delay for one in-game frame so that our wow's cam doesn't get confused
 		-- also, set the target .5 further to account for the general inaccuracy of this function. It should be sorted out by the stop script
 
-		if destination >= GetCameraZoom() then 
+		if destination >= currentZoom then
 			-- C_Timer.After(.001, function() CameraZoomOut(destination - GetCameraZoom() + .5) end)
-			ACP.doubleDelay(function() CameraZoomOut(destination - GetCameraZoom() + .5) end)
+			ACP.doubleDelay(function() CameraZoomOut(destination - currentZoom + .5) end)
 		else
 			-- C_Timer.After(.001, function() CameraZoomIn(GetCameraZoom() - destination + .5) end)
-			ACP.doubleDelay(function() CameraZoomIn(GetCameraZoom() - destination + .5) end)
+			ACP.doubleDelay(function() CameraZoomIn(currentZoom - destination + .5) end)
 		end
 	end
 end
@@ -535,9 +545,10 @@ function ACP_ZoomOverride(out)
 	else zoomFunc = function(increment) CameraZoomIn(increment) end
 	end
 
-	if camMoving then
+	if _destination then
 		MoveViewOutStop()
 		MoveViewInStop()
+		_destination = nil
 		C_Timer.After(0, function() zoomFunc(increment) end)
 	else
 		zoomFunc(increment)
